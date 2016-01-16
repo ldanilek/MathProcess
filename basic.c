@@ -71,8 +71,15 @@ bool analyzeForBinaryOp(Expression* exp, char* string, int len,
         else if (string[i] == '(') parenDepth--;
         else if (parenDepth == 0 && strncmp(string+i, op, opLen)==0)
         {
-            // make sure it isn't unary
-            if (i==0 ||string[i-1] == '(' || isBinaryOp(string[i-1])) continue;
+            // check if unary prefix
+            if (i == 0 && strcmp(op, "-") == 0)
+            {
+                appendExpressionOfLen(exp, string + 1, len - 1);
+                appendOperation(exp, "neg");
+                return true;
+            }
+            assert(i>0);
+            if (isBinaryOp(string[i-1])) continue;
             assert(i<len-1);
             appendExpressionOfLen(exp, string, i);
             appendExpressionOfLen(exp, string+i+1, len-i-1);
@@ -80,6 +87,7 @@ bool analyzeForBinaryOp(Expression* exp, char* string, int len,
             return true;
         }
     }
+    assert(parenDepth == 0);
     return false;
 }
 
@@ -144,7 +152,6 @@ void appendExpressionOfLen(Expression* exp, char* string, int len)
     else if (strncmp(string, "tan(", 4) == 0) unary = "tan";
     else if (strncmp(string, "ln(", 3) == 0) unary = "ln";
     else if (strncmp(string, "log(", 4) == 0) unary = "log";
-    else if (strncmp(string, "-(", 2) == 0) unary = "-";
     if (unary) string += strlen(unary), len -= strlen(unary);
     int parenDepth = 0;
     bool allNested = true;
@@ -223,7 +230,11 @@ double popValue(Expression* exp, double* variables)
     else if (strcmp(op, "-") == 0)
     {
         if (exp->count) return popValue(exp, variables) - operand;
-        else return -operand;
+        return -operand;
+    }
+    else if (strcmp(op, "neg") == 0)
+    {
+        return -operand;
     }
     else if (strcmp(op, "*") == 0)
     {
